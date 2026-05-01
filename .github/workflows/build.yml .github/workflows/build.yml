@@ -1,0 +1,31 @@
+name: Cloud Build Crash 5
+on: workflow_dispatch
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Archive Project
+        run: |
+          xcodebuild archive \
+            -project "Crash 5 TTMABE.xcodeproj" \
+            -scheme "Crash 5 TTMABE" \
+            -archivePath $PWD/build/App.xcarchive \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+     
+      - name: Package as IPA
+        run: |
+          mkdir -p build/Payload
+          cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
+          cd build && zip -r Crash5.ipa Payload
+   
+      - name: Send to iPad
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crash5-IPA
+          path: build/Crash5.ipa
