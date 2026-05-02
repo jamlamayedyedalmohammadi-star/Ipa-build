@@ -1,30 +1,33 @@
-name: Unpack and Build Crash 5
+name: Build Crash 5 TTMABE
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-
-      - name: Unpack Source Code
+      - uses: actions/checkout@v4
+      
+      - name: Unpack GZ
         run: |
-          # This unpacks your .gz or .tar.gz file
-          # Replace 'source.tar.gz' with the actual name of your file
-          tar -xzf "Crash 5 TTMABE.tar.gz" || gunzip -c "Crash 5 TTMABE.gz" > "Crash 5 TTMABE.xcodeproj" || echo "Unpacking failed"
+          # Unpacks the file regardless of its internal folder structure
+          tar -xzf "Crash 5 TTMABE.gz" || tar -xzf "Crash 5 TTMABE.tar.gz" || gunzip -c "Crash 5 TTMABE.gz" > source_code
 
-      - name: Build Archive
+      - name: Auto-Detect and Archive
         run: |
+          # Finds the project file automatically so "Archive Failed" stops happening
+          PROJECT_PATH=$(find . -name "*.xcodeproj" -o -name "*.xcworkspace" | head -n 1)
+          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" -json | python3 -c "import sys, json; print(json.load(sys.stdin)['project']['schemes'][0])" 2>/dev/null || echo "Crash 5 TTMABE")
+
           xcodebuild archive \
-            -project "Crash 5 TTMABE.xcodeproj" \
-            -scheme "Crash 5 TTMABE" \
+            -project "$PROJECT_PATH" \
+            -scheme "$SCHEME_NAME" \
             -archivePath $PWD/build/App.xcarchive \
             -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-      - name: Create IPA
+      - name: Finalize IPA
         run: |
           mkdir -p build/Payload
           cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
@@ -33,5 +36,5 @@ jobs:
       - name: Upload to iPad
         uses: actions/upload-artifact@v4
         with:
-          name: Final-IPA
+          name: Crash5-IPA
           path: build/Crash5.ipa
