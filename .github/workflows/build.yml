@@ -1,14 +1,20 @@
-name: Cloud Build Crash 5
+name: Unpack and Build Crash 5
 on: workflow_dispatch
 
 jobs:
-  build-ipa:
+  build:
     runs-on: macos-latest
     steps:
-      - name: Checkout Source
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Archive Project
+      - name: Unpack Source Code
+        run: |
+          # This unpacks your .gz or .tar.gz file
+          # Replace 'source.tar.gz' with the actual name of your file
+          tar -xzf "Crash 5 TTMABE.tar.gz" || gunzip -c "Crash 5 TTMABE.gz" > "Crash 5 TTMABE.xcodeproj" || echo "Unpacking failed"
+
+      - name: Build Archive
         run: |
           xcodebuild archive \
             -project "Crash 5 TTMABE.xcodeproj" \
@@ -17,13 +23,15 @@ jobs:
             -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
-      - name: Package as IPA
+
+      - name: Create IPA
         run: |
           mkdir -p build/Payload
           cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
           cd build && zip -r Crash5.ipa Payload
-      - name: Package as IPA
-        run: |
-          mkdir -p build/Payload
-          cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
-          cd build && zip -r Crash5.ipa Payload
+
+      - name: Upload to iPad
+        uses: actions/upload-artifact@v4
+        with:
+          name: Final-IPA
+          path: build/Crash5.ipa
