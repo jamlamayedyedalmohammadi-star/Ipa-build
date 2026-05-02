@@ -1,31 +1,31 @@
-name: Build Crash 5 TTMABE
+name: Unpack tar.gz and Build
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Unpack GZ
-        run: |
-          # Unpacks the file regardless of its internal folder structure
-          tar -xzf "Crash 5 TTMABE.gz" || tar -xzf "Crash 5 TTMABE.tar.gz" || gunzip -c "Crash 5 TTMABE.gz" > source_code
+      - name: Checkout Repo
+        uses: actions/checkout@v4
 
-      - name: Auto-Detect and Archive
+      - name: Extract Source Code
         run: |
-          # Finds the project file automatically so "Archive Failed" stops happening
-          PROJECT_PATH=$(find . -name "*.xcodeproj" -o -name "*.xcworkspace" | head -n 1)
-          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" -json | python3 -c "import sys, json; print(json.load(sys.stdin)['project']['schemes'][0])" 2>/dev/null || echo "Crash 5 TTMABE")
+          # Extracts the tar.gz and creates a folder for it
+          mkdir -p extracted_source
+          tar -xzf "Crash 5 TTMABE.tar.gz" -C extracted_source
 
+      - name: Auto-Detect Project and Build
+        run: |
+          # Searches for the .xcodeproj file anywhere in the extracted folder
+          PROJECT_PATH=$(find extracted_source -name "*.xcodeproj" | head -n 1)
+          
           xcodebuild archive \
             -project "$PROJECT_PATH" \
-            -scheme "$SCHEME_NAME" \
+            -scheme "Crash 5 TTMABE" \
             -archivePath $PWD/build/App.xcarchive \
             -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES
+            CODE_SIGNING_REQUIRED=NO
 
       - name: Finalize IPA
         run: |
@@ -36,5 +36,5 @@ jobs:
       - name: Upload to iPad
         uses: actions/upload-artifact@v4
         with:
-          name: Crash5-IPA
+          name: Final-IPA
           path: build/Crash5.ipa
