@@ -1,33 +1,30 @@
-name: Fix Code 74 and Build
+name: Build from ios_source
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Extract and Move to Root
+      - name: Extract ios_source
         run: |
-          # 1. Extract everything
-          mkdir -p temp_unpack
-          tar -xzf *.tar.gz -C temp_unpack
-          
-          # 2. Move everything from the subfolder to the root so Xcode doesn't get lost
-          cp -R temp_unpack/*/. . || cp -R temp_unpack/. .
-          
-      - name: Build with Auto-Scheme
+          # Creates a folder and unpacks your specific tar.gz file
+          mkdir -p source_data
+          tar -xzvf "ios_source.tar.gz" -C source_data
+
+      - name: Auto-Detect and Build
         run: |
-          # 1. Find the project file
-          PROJECT_PATH=$(find . -name "*.xcodeproj" | head -n 1)
-          echo "Using Project: $PROJECT_PATH"
+          # 1. Find the project wherever it is inside the archive
+          PROJECT_PATH=$(find source_data -name "*.xcodeproj" | head -n 1)
+          echo "Found Project: $PROJECT_PATH"
           
-          # 2. Automatically find the FIRST scheme so we don't guess the name
-          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" -json | python3 -c "import sys, json; print(json.load(sys.stdin)['project']['schemes'][0])")
+          # 2. Get the scheme automatically to avoid "Code 1" errors
+          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" -json | python3 -c "import sys, json; print(json.load(sys.stdin)['project']['schemes'])" 2>/dev/null | head -n 1 || echo "Crash 5 TTMABE")
           echo "Using Scheme: $SCHEME_NAME"
-          
-          # 3. The Build
+
+          # 3. Build Archive (Unsigned for iPad)
           xcodebuild archive \
             -project "$PROJECT_PATH" \
             -scheme "$SCHEME_NAME" \
@@ -35,16 +32,16 @@ jobs:
             -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-      - name: Create IPA
+      - name: Package IPA
         run: |
           mkdir -p build/Payload
           cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
-          cd build && zip -r FinalApp.ipa Payload
+          cd build && zip -r Crash5_Built.ipa Payload
 
-      - name: Upload
+      - name: Upload to iPad
         uses: actions/upload-artifact@v4
         with:
-          name: Fixed-Crash5-IPA
-          path: build/FinalApp.ipa
+          name: Final-IPA
+          path: build/Crash5_Built.ipa
