@@ -1,35 +1,36 @@
-name: Build from ios_source
+name: iPad Brute Force Build
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Extract ios_source
         run: |
-          # Creates a folder and unpacks your specific tar.gz file
-          mkdir -p source_data
-          tar -xzvf "ios_source.tar.gz" -C source_data
-
-      - name: Auto-Detect and Build
-        run: |
-          # 1. Find the project wherever it is inside the archive
-          PROJECT_PATH=$(find source_data -name "*.xcodeproj" | head -n 1)
-          echo "Found Project: $PROJECT_PATH"
+          # Force unpack everything into a clean folder
+          mkdir -p build_source
+          tar -xzvf "ios_source.tar.gz" -C build_source
           
-          # 2. Get the scheme automatically to avoid "Code 1" errors
-          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" -json | python3 -c "import sys, json; print(json.load(sys.stdin)['project']['schemes'])" 2>/dev/null | head -n 1 || echo "Crash 5 TTMABE")
+      - name: Auto-Detect and Fix Project
+        run: |
+          # 1. Find the project wherever it is
+          PROJECT_PATH=$(find build_source -name "*.xcodeproj" | head -n 1)
+          echo "Found Project at: $PROJECT_PATH"
+          
+          # 2. Get the real Scheme name (this fixes code 74/65 errors)
+          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" -json | python3 -c "import sys, json; print(json.load(sys.stdin)['project']['schemes'][0])")
           echo "Using Scheme: $SCHEME_NAME"
-
-          # 3. Build Archive (Unsigned for iPad)
+          
+          # 3. The Build - Adding 'clean' to fix error 74
           xcodebuild archive \
             -project "$PROJECT_PATH" \
             -scheme "$SCHEME_NAME" \
             -archivePath $PWD/build/App.xcarchive \
             -sdk iphoneos \
+            -configuration Release \
+            clean archive \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES
@@ -38,10 +39,10 @@ jobs:
         run: |
           mkdir -p build/Payload
           cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
-          cd build && zip -r Crash5_Built.ipa Payload
+          cd build && zip -r BuiltApp.ipa Payload
 
       - name: Upload to iPad
         uses: actions/upload-artifact@v4
         with:
           name: Final-IPA
-          path: build/Crash5_Built.ipa
+          path: build/BuiltApp.ipa
