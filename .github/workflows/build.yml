@@ -1,4 +1,4 @@
-name: Unpack tar.gz and Build
+name: Debug and Build Crash 5
 on: workflow_dispatch
 
 jobs:
@@ -8,16 +8,24 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Extract Source Code
+      - name: List Files (Debug)
         run: |
-          # Extracts the tar.gz and creates a folder for it
-          mkdir -p extracted_source
-          tar -xzf "Crash 5 TTMABE.tar.gz" -C extracted_source
+          echo "Checking for your file..."
+          ls -R # This shows us every file in the logs if it fails again
 
-      - name: Auto-Detect Project and Build
+      - name: Auto-Extract Any tar.gz
         run: |
-          # Searches for the .xcodeproj file anywhere in the extracted folder
+          # This finds the first tar.gz file it can see and extracts it
+          FILE_NAME=$(find . -name "*.tar.gz" | head -n 1)
+          echo "Found file: $FILE_NAME"
+          mkdir -p extracted_source
+          tar -xzf "$FILE_NAME" -C extracted_source
+
+      - name: Find Project and Build
+        run: |
+          # This finds the .xcodeproj wherever it is inside the extracted folder
           PROJECT_PATH=$(find extracted_source -name "*.xcodeproj" | head -n 1)
+          echo "Building project at: $PROJECT_PATH"
           
           xcodebuild archive \
             -project "$PROJECT_PATH" \
@@ -27,13 +35,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
-      - name: Finalize IPA
+      - name: Create and Upload IPA
         run: |
           mkdir -p build/Payload
           cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
           cd build && zip -r Crash5.ipa Payload
 
-      - name: Upload to iPad
+      - name: Upload Finished IPA
         uses: actions/upload-artifact@v4
         with:
           name: Final-IPA
