@@ -1,48 +1,50 @@
-name: Debug and Build Crash 5
+name: Fix Code 74 and Build
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout Repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: List Files (Debug)
+      - name: Extract and Move to Root
         run: |
-          echo "Checking for your file..."
-          ls -R # This shows us every file in the logs if it fails again
-
-      - name: Auto-Extract Any tar.gz
-        run: |
-          # This finds the first tar.gz file it can see and extracts it
-          FILE_NAME=$(find . -name "*.tar.gz" | head -n 1)
-          echo "Found file: $FILE_NAME"
-          mkdir -p extracted_source
-          tar -xzf "$FILE_NAME" -C extracted_source
-
-      - name: Find Project and Build
-        run: |
-          # This finds the .xcodeproj wherever it is inside the extracted folder
-          PROJECT_PATH=$(find extracted_source -name "*.xcodeproj" | head -n 1)
-          echo "Building project at: $PROJECT_PATH"
+          # 1. Extract everything
+          mkdir -p temp_unpack
+          tar -xzf *.tar.gz -C temp_unpack
           
+          # 2. Move everything from the subfolder to the root so Xcode doesn't get lost
+          cp -R temp_unpack/*/. . || cp -R temp_unpack/. .
+          
+      - name: Build with Auto-Scheme
+        run: |
+          # 1. Find the project file
+          PROJECT_PATH=$(find . -name "*.xcodeproj" | head -n 1)
+          echo "Using Project: $PROJECT_PATH"
+          
+          # 2. Automatically find the FIRST scheme so we don't guess the name
+          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_PATH" -json | python3 -c "import sys, json; print(json.load(sys.stdin)['project']['schemes'][0])")
+          echo "Using Scheme: $SCHEME_NAME"
+          
+          # 3. The Build
           xcodebuild archive \
             -project "$PROJECT_PATH" \
-            -scheme "Crash 5 TTMABE" \
+            -scheme "$SCHEME_NAME" \
             -archivePath $PWD/build/App.xcarchive \
             -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO
 
-      - name: Create and Upload IPA
+      - name: Create IPA
         run: |
           mkdir -p build/Payload
           cp -R build/App.xcarchive/Products/Applications/*.app build/Payload/
-          cd build && zip -r Crash5.ipa Payload
+          cd build && zip -r FinalApp.ipa Payload
 
-      - name: Upload Finished IPA
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Final-IPA
-          path: build/Crash5.ipa
+          name: Fixed-Crash5-IPA
+          path: build/FinalApp.ipa
