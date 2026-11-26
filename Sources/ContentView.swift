@@ -24,8 +24,8 @@ struct LocalWebView: UIViewRepresentable {
         let fileManager = FileManager.default
         guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         
-        // Creates "assets" inside On My iPad > LocalWebRunner
-        let assetsURL = docsURL.appendingPathComponent("assets")
+        // Creates "Assets" inside On My iPad > SARPBC
+        let assetsURL = docsURL.appendingPathComponent("Assets")
         if !fileManager.fileExists(atPath: assetsURL.path) {
             try? fileManager.createDirectory(at: assetsURL, withIntermediateDirectories: true)
         }
@@ -36,11 +36,35 @@ struct LocalWebView: UIViewRepresentable {
             webView.loadFileURL(indexURL, allowingReadAccessTo: assetsURL)
         } else {
             let placeholderHTML = """
+            <!DOCTYPE html>
             <html>
-            <body style="font-family: -apple-system; text-align: center; padding-top: 20%;">
-                <h2>Folder Created!</h2>
-                <p>Open <b>Files</b> &rarr; <b>On My iPad</b> &rarr; <b>LocalWebRunner</b> &rarr; <b>assets</b></p>
-                <p>Drop your <code>index.html</code> and files inside, then force-close and reopen this app.</p>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        text-align: center;
+                        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+                        font-size: 26px;
+                        line-height: 1.4;
+                        color: #000000;
+                        background-color: #ffffff;
+                    }
+                    .spacer {
+                        height: 36px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div>No index.html Detected</div>
+                <div>Please Insert The Game Assets In</div>
+                <div class="spacer"></div>
+                <div>On My iPad &gt; SARPBC &gt; Assets</div>
             </body>
             </html>
             """
