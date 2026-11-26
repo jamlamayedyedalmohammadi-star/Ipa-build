@@ -10,6 +10,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate iOS App Icon
+        run: |
+          mkdir -p Assets.xcassets/AppIcon.appiconset
+          sips -s format png -z 1024 1024 icon.png --out Assets.xcassets/AppIcon.appiconset/icon-1024.png
+          cat << 'EOF' > Assets.xcassets/AppIcon.appiconset/Contents.json
+          {
+            "images" : [
+              {
+                "filename" : "icon-1024.png",
+                "idiom" : "universal",
+                "platform" : "ios",
+                "size" : "1024x1024"
+              }
+            ],
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          EOF
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -18,8 +39,8 @@ jobs:
 
       - name: Build App
         run: |
-          xcodebuild -project LocalWebRunner.xcodeproj \
-            -scheme LocalWebRunner \
+          xcodebuild -project SARPBC.xcodeproj \
+            -scheme SARPBC \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
@@ -30,11 +51,11 @@ jobs:
       - name: Package IPA
         run: |
           mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/LocalWebRunner.app Payload/
-          zip -r LocalWebRunner.ipa Payload
+          cp -r build/Build/Products/Release-iphoneos/SARPBC.app Payload/
+          zip -r SARPBC.ipa Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: LocalWebRunner-IPA
-          path: LocalWebRunner.ipa
+          name: SARPBC-IPA
+          path: SARPBC.ipa
