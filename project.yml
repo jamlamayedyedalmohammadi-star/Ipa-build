@@ -1,16 +1,21 @@
-name: LocalWebRunner
+name: SARPBC
 options:
-  bundleIdPrefix: com.localwebrunner
+  bundleIdPrefix: com.sarpbc
 targets:
-  LocalWebRunner:
+  SARPBC:
     type: application
     platform: iOS
     deploymentTarget: "15.0"
     sources:
       - Sources
+      - Assets.xcassets
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: Info.plist
       properties:
+        CFBundleDisplayName: SARPBC
         UILaunchScreen: {}
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
